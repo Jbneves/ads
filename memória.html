@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Jogo da Memória</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f0f0;
+      text-align: center;
+      margin: 20px;
+    }
+
+    h1 {
+      color: #333;
+    }
+
+    .status {
+      font-size: 18px;
+      margin-top: 10px;
+      color: #444;
+    }
+
+    .tabuleiro {
+      display: grid;
+      grid-template-columns: repeat(4, 80px);
+      grid-gap: 10px;
+      justify-content: center;
+      margin: 20px auto;
+    }
+
+    .carta {
+      width: 80px;
+      height: 80px;
+      background: #4CAF50;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      color: white;
+      cursor: pointer;
+      border-radius: 8px;
+      user-select: none;
+      transform: scale(1);
+      transition: all 0.2s ease;
+    }
+
+    .carta.virada {
+      background: #fff;
+      color: #4CAF50;
+      border: 2px solid #4CAF50;
+      transform: scale(1.05);
+    }
+
+    #mensagem {
+      margin-top: 20px;
+      font-size: 20px;
+      color: #333;
+    }
+
+    button {
+      margin-top: 10px;
+      padding: 8px 16px;
+      font-size: 16px;
+      border: none;
+      background: #4CAF50;
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h1>Jogo da Memória</h1>
+
+  <div class="status">
+    <span>Pontuação: <strong id="pontuacao">0</strong></span> |
+    <span>Erros: <strong id="erros">0</strong></span> |
+    <span>Tempo: <strong id="cronometro">0</strong>s</span> |
+    <span>Melhor tempo: <strong id="recorde">--</strong>s</span>
+  </div>
+
+  <div class="tabuleiro" id="tabuleiro"></div>
+
+  <div id="mensagem"></div>
+
+  <script>
+    const emojis = ['🍎','🍌','🍇','🍉','🍓','🍍','🥝','🍒'];
+    let cartas = [];
+    let cartasViradas = [];
+    let travarJogo = false;
+    let pontuacao = 0;
+    let erros = 0;
+    let tempo = 0;
+    let timer;
+    let recorde = localStorage.getItem("melhorTempo") || "--";
+
+    document.getElementById("recorde").innerText = recorde;
+
+    function iniciarJogo() {
+      document.getElementById('mensagem').innerHTML = '';
+      document.getElementById("pontuacao").innerText = "0";
+      document.getElementById("erros").innerText = "0";
+      document.getElementById("cronometro").innerText = "0";
+      clearInterval(timer);
+      tempo = 0;
+      pontuacao = 0;
+      erros = 0;
+      cartasViradas = [];
+      travarJogo = false;
+
+      cartas = [...emojis, ...emojis].sort(() => 0.5 - Math.random());
+      const tabuleiro = document.getElementById('tabuleiro');
+      tabuleiro.innerHTML = '';
+
+      cartas.forEach((emoji, index) => {
+        const carta = document.createElement('div');
+        carta.classList.add('carta');
+        carta.dataset.valor = emoji;
+        carta.dataset.index = index;
+        carta.innerText = '';
+        carta.addEventListener('click', virarCarta);
+        tabuleiro.appendChild(carta);
+      });
+
+      timer = setInterval(() => {
+        tempo++;
+        document.getElementById("cronometro").innerText = tempo;
+      }, 1000);
+    }
+
+    function virarCarta() {
+      if (travarJogo || this.classList.contains('virada')) return;
+
+      this.classList.add('virada');
+      this.innerText = this.dataset.valor;
+      cartasViradas.push(this);
+
+      if (cartasViradas.length === 2) {
+        travarJogo = true;
+        setTimeout(verificarPar, 800);
+      }
+    }
+
+    function verificarPar() {
+      const [c1, c2] = cartasViradas;
+      if (c1.dataset.valor === c2.dataset.valor) {
+        pontuacao += 10;
+        document.getElementById("pontuacao").innerText = pontuacao;
+      } else {
+        erros++;
+        document.getElementById("erros").innerText = erros;
+        c1.classList.remove('virada');
+        c2.classList.remove('virada');
+        c1.innerText = '';
+        c2.innerText = '';
+      }
+      cartasViradas = [];
+      travarJogo = false;
+      verificarFimDoJogo();
+    }
+
+    function verificarFimDoJogo() {
+      const todasCartas = document.querySelectorAll('.carta');
+      const todasViradas = [...todasCartas].every(carta => carta.classList.contains('virada'));
+
+      if (todasViradas) {
+        clearInterval(timer);
+        const mensagem = document.getElementById('mensagem');
+        mensagem.innerHTML = `
+          <p>Parabéns, você venceu!</p>
+          <p>Tempo: ${tempo}s | Pontuação: ${pontuacao}</p>
+          <button onclick="iniciarJogo()">Jogar novamente</button>
+        `;
+
+        // Salva melhor tempo
+        if (recorde === "--" || tempo < parseInt(recorde)) {
+          localStorage.setItem("melhorTempo", tempo);
+          document.getElementById("recorde").innerText = tempo;
+        }
+      }
+    }
+
+    iniciarJogo();
+  </script>
+</body>
+</html>
